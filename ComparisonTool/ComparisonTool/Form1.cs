@@ -8,6 +8,14 @@ using System.Text;
 using System.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
 
+/* Josh Beck, CRC Technologies 2017
+ * Comparison Tool
+ * 
+ * The purpose of this tool is to take two reports from Cobra and create a comparison report.
+ * The two reports should be nearly identical with the difference being the value (whether that is in $ or otherwise).
+ * The tool will take the two reports and create a report with the deltas.
+ */
+
 namespace ComparisonTool
 {
     public partial class Form1 : Form
@@ -80,6 +88,7 @@ namespace ComparisonTool
             {
                 for (int c = 1; c <= colCount; c++)
                 {
+                    // had to do this to store dates as a date object
                     if (c - 1 == dateIndex && NumRow != 1)
                     {
                         double d = Convert.ToDouble(values[NumRow, c]);
@@ -290,7 +299,7 @@ namespace ComparisonTool
             }
         }
 
-        private void createReportButton_Click(object sender, EventArgs e)
+        private int[] readExcelFile2()
         {
             Excel.Application xlApp = new Excel.Application();
             Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(filenamesArray[1]);
@@ -328,19 +337,20 @@ namespace ComparisonTool
             }
             xlString2 = xlString;
 
-            createReportByResult(rowCount, colCount);
-
-            //oXL.Visible = true;
-
-            /*var startCell = (Excel.Range)oSheet.Cells[1, 1];
-            var endCell = (Excel.Range)oSheet.Cells[rowCount, colCount];
-            var writeRange = oSheet.Range[startCell, endCell];
-           
-            writeRange.Value2 = finalResults;*/
-            //oWB.Close();
-
             xlWorkBook.Close(SaveChanges: false);
             xlApp.Quit();
+
+            int[] rv = new int[2];
+            rv[0] = rowCount;
+            rv[1] = colCount;
+            return rv;
+        }
+
+        private void createReportButton_Click(object sender, EventArgs e)
+        {
+            int[] counts = readExcelFile2();
+            createReportByResult(counts[0], counts[1]);
+
             this.Close();
         }
 
@@ -349,8 +359,7 @@ namespace ComparisonTool
             Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
             oXL.Visible = true;
 
-            //Get a new workbook.
-
+            // the delta in value
             double difference = 0.0;
             object[,] finalResults = new object[rowCount, colCount];
             for (int i = 1; i < rowCount; i++)
@@ -395,7 +404,6 @@ namespace ComparisonTool
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
-
         }
 
         private void column4Box_SelectedIndexChanged_1(object sender, EventArgs e)
@@ -424,6 +432,66 @@ namespace ComparisonTool
             uniqueNames[0] = column1Box.Text;
             uniqueNameIndices[0] = column1Box.SelectedIndex;
             checkUniqueNames();
+        }
+
+        private void byYearButton_Click(object sender, EventArgs e)
+        {
+            int[] counts = readExcelFile2();
+            createReportByYear(counts[0], counts[1]);
+
+            this.Close();
+        }
+
+        private void createReportByYear(int rowCount, int colCount)
+        {
+            Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
+            oXL.Visible = true;
+
+            // the delta in value
+            double difference = 0.0;
+            object[,] finalResults = new object[rowCount, colCount];
+            for (int i = 1; i < rowCount; i++)
+            {
+                string[] match = new string[colCount];
+                //MessageBox.Show(valueIndex.ToString() + " " + xlString2[i, valueIndex]);
+                difference = Convert.ToDouble(xlString2[i, valueIndex]);
+                for (int j = 1; j < xl1Size; j++)
+                {
+                    /*MessageBox.Show(j + " " + xlString1[j, 0] + " " + xlString1[j, 1] + " " + xlString1[j, 2] + " " + xlString1[j, 3] + " " + xlString1[j, 4]
+                        + "\n" + i + " " + xlString2[i, 0] + " " + xlString2[i, 1] + " " + xlString2[i, 2] + " " + xlString2[i, 3] + " " + xlString2[i, 4]);
+                    */
+                    if (xlString1[j, uniqueNameIndices[0]].ToString() == xlString2[i, uniqueNameIndices[0]].ToString() && xlString1[j, uniqueNameIndices[1]].ToString() == xlString2[i, uniqueNameIndices[1]].ToString()
+                        && xlString1[j, uniqueNameIndices[2]].ToString() == xlString2[i, uniqueNameIndices[2]].ToString() && xlString1[j, uniqueNameIndices[3]].ToString() == xlString2[i, uniqueNameIndices[3]].ToString())
+                    {
+                        difference = difference - Convert.ToDouble(xlString1[j, valueIndex]);
+                        break;
+                    }
+                }
+                for (int j = 0; j < colCount; j++)
+                {
+                    if (valueIndex == j)
+                    {
+                        finalResults[i - 1, j] = difference;
+                    }
+                    else
+                    {
+                        finalResults[i - 1, j] = xlString2[i, j];
+                    }
+                }
+            }
+
+            Excel._Workbook oWB = (Microsoft.Office.Interop.Excel._Workbook)(oXL.Workbooks.Add(""));
+            Excel._Worksheet oSheet = (Microsoft.Office.Interop.Excel._Worksheet)oWB.ActiveSheet;
+            var startCell = (Excel.Range)oSheet.Cells[1, 1];
+            var endCell = (Excel.Range)oSheet.Cells[rowCount, colCount];
+            var writeRange = oSheet.Range[startCell, endCell];
+
+            writeRange.Value2 = finalResults;
+
+            //MessageBox.Show("Success");
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
 
         private void helpButton_Click(object sender, EventArgs e)
