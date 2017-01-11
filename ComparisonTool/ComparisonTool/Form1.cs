@@ -40,6 +40,8 @@ namespace ComparisonTool
         int dateIndex = 0;
         // size of first xlSheet
         int xl1Size = 0;
+        Dictionary<string, DateTime> calendar;
+        List<int> indicesWithMatch = new List<int>();
 
         public Form1()
         {
@@ -81,11 +83,25 @@ namespace ComparisonTool
             xlString = new object[rowCount, colCount];
             Fields = new string[colCount];
             values = (object[,])xlRange.Value2;
+            xlString1 = values;
 
-
+            for (int i = 1; i <= colCount; i++)
+            {
+                colNames[i - 1] = values[1, i].ToString();
+                if (colNames[i - 1] == "Value")
+                {
+                    valueIndex = i - 1;
+                }
+                else if (colNames[i - 1] == "Date")
+                {
+                    dateIndex = i - 1;
+                }
+            }
+            /*
             int NumRow = 1;
             while (NumRow <= values.GetLength(0))
             {
+                indicesWithMatch.Add(NumRow - 1);
                 for (int c = 1; c <= colCount; c++)
                 {
                     // had to do this to store dates as a date object
@@ -312,6 +328,9 @@ namespace ComparisonTool
             object[,] xlString = new object[rowCount, colCount];
             string[] Fields = new string[colCount];
             object[,] values = (object[,])xlRange.Value2;
+
+            xlString2 = values;
+            /*
             int NumRow = 1;
             while (NumRow <= values.GetLength(0))
             {
@@ -333,7 +352,7 @@ namespace ComparisonTool
                 NumRow++;
             }
             xlString2 = xlString;
-            
+            */
             // grab the fiscal year calender
             if (getYears)
             {
@@ -344,27 +363,18 @@ namespace ComparisonTool
                 int calRowCount = xlRange.Rows.Count;
                 int calColCount = xlRange.Columns.Count;
 
-                object[,] calendar = new object[calRowCount, calColCount];
+                calendar = new Dictionary<string, DateTime>();
                 values = (object[,])xlRange.Value2;
-                NumRow = 1;
+                int NumRow = 1;
                 while (NumRow <= values.GetLength(0))
                 {
-                    for (int c = 1; c <= calColCount; c++)
+                    if (values[NumRow, 2].ToString() != "Transition" && NumRow != 1)
                     {
-                        // for the first object in each row we want the date
-                        if (c == 1 && NumRow != 1)
-                        {
-                            double d = Convert.ToDouble(values[NumRow, c]);
+                        double d = Convert.ToDouble(values[NumRow, 1]);
 
-                            DateTime conv = DateTime.FromOADate(d);
-                            MessageBox.Show(d.ToString());
+                        DateTime conv = DateTime.FromOADate(d);
 
-                            calendar[NumRow - 1, c - 1] = conv;
-                        }
-                        else
-                        {
-                            calendar[NumRow - 1, c - 1] = values[NumRow, c];
-                        }
+                        calendar.Add(values[NumRow, 2].ToString(), conv);
                     }
                     NumRow++;
                 }
@@ -433,26 +443,68 @@ namespace ComparisonTool
 
         private void createReportByYear(int rowCount, int colCount)
         {
-            Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
-            oXL.Visible = true;
+            //Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
+            //oXL.Visible = true;
+            string controlAccount;
+            string workPackage;
+            string resourceAssignment;
+            string result;
 
             // the delta in value
             double difference = 0.0;
             object[,] finalResults = new object[rowCount, colCount];
-            for (int i = 1; i < rowCount; i++)
+            //  MessageBox.Show(xlString2[2, 1].ToString() + " " + xlString2[2, 2].ToString());
+            string name;
+            for (int i = 2; i <= rowCount; i++)
             {
+                name = "";
+                for (int j = 1; j < colCount - 1; j++)
+                {
+                    // because of the weird way excel file reading works every index is +1 what it should be
+                    if (j != dateIndex+1)
+                    {
+                        name += xlString2[i, j].ToString();
+                    }
+                    if (j < colCount - 2)
+                    {
+                        name += "_";
+                    }
+                }
+                MessageBox.Show(name);
+            }
+            /*
+                controlAccount = xlString2[i, 1].ToString();
+                while (xlString2[i, 1].ToString() == controlAccount)
+                {
+                    workPackage = xlString2[i, 2].ToString();
+                    while (xlString2[i, 2].ToString() == workPackage)
+                    {
+                        resourceAssignment = xlString2[i, 3].ToString();
+                        while (xlString2[i, 3].ToString() == resourceAssignment)
+                        {
+                            result = xlString2[i, 4].ToString();
+                            while(xlString2[i, 4].ToString() == result)
+                            {
+
+                            }
+                        }
+                    }
+                }
                 string[] match = new string[colCount];
                 //MessageBox.Show(valueIndex.ToString() + " " + xlString2[i, valueIndex]);
                 difference = Convert.ToDouble(xlString2[i, valueIndex]);
                 for (int j = 1; j < xl1Size; j++)
                 {
-                    /*MessageBox.Show(j + " " + xlString1[j, 0] + " " + xlString1[j, 1] + " " + xlString1[j, 2] + " " + xlString1[j, 3] + " " + xlString1[j, 4]
+                    MessageBox.Show(j + " " + xlString1[j, 0] + " " + xlString1[j, 1] + " " + xlString1[j, 2] + " " + xlString1[j, 3] + " " + xlString1[j, 4]
                         + "\n" + i + " " + xlString2[i, 0] + " " + xlString2[i, 1] + " " + xlString2[i, 2] + " " + xlString2[i, 3] + " " + xlString2[i, 4]);
-                    */
-                    if (xlString1[j, uniqueNameIndices[0]].ToString() == xlString2[i, uniqueNameIndices[0]].ToString() && xlString1[j, uniqueNameIndices[1]].ToString() == xlString2[i, uniqueNameIndices[1]].ToString()
-                        && xlString1[j, uniqueNameIndices[2]].ToString() == xlString2[i, uniqueNameIndices[2]].ToString() && xlString1[j, uniqueNameIndices[3]].ToString() == xlString2[i, uniqueNameIndices[3]].ToString())
+                    
+                    if (xlString1[j, uniqueNameIndices[0]].ToString() == xlString2[i, uniqueNameIndices[0]].ToString() 
+                        && xlString1[j, uniqueNameIndices[1]].ToString() == xlString2[i, uniqueNameIndices[1]].ToString()
+                        && xlString1[j, uniqueNameIndices[2]].ToString() == xlString2[i, uniqueNameIndices[2]].ToString() 
+                        && xlString1[j, uniqueNameIndices[3]].ToString() == xlString2[i, uniqueNameIndices[3]].ToString())
                     {
                         difference = difference - Convert.ToDouble(xlString1[j, valueIndex]);
+                        indicesWithMatch.Remove(j);
                         break;
                     }
                 }
@@ -468,8 +520,9 @@ namespace ComparisonTool
                     }
                 }
             }
+            MessageBox.Show(indicesWithMatch.Count.ToString());
 
-            Excel._Workbook oWB = (Microsoft.Office.Interop.Excel._Workbook)(oXL.Workbooks.Add(""));
+            /*Excel._Workbook oWB = (Microsoft.Office.Interop.Excel._Workbook)(oXL.Workbooks.Add(""));
             Excel._Worksheet oSheet = (Microsoft.Office.Interop.Excel._Worksheet)oWB.ActiveSheet;
             var startCell = (Excel.Range)oSheet.Cells[1, 1];
             var endCell = (Excel.Range)oSheet.Cells[rowCount, colCount];
@@ -480,7 +533,7 @@ namespace ComparisonTool
             //MessageBox.Show("Success");
 
             GC.Collect();
-            GC.WaitForPendingFinalizers();
+            GC.WaitForPendingFinalizers();*/
         }
 
         private void createReportButton_Click(object sender, EventArgs e)
@@ -494,7 +547,7 @@ namespace ComparisonTool
         private void byYearButton_Click(object sender, EventArgs e)
         {
             int[] counts = readExcelFile2(true);
-            //createReportByYear(counts[0], counts[1]);
+            createReportByYear(counts[0], counts[1]);
 
             this.Close();
         }
