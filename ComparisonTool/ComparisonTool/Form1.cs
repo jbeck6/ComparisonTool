@@ -40,8 +40,11 @@ namespace ComparisonTool
         int dateIndex = 0;
         // size of first xlSheet
         int xl1Size = 0;
-        Dictionary<string, DateTime> calendar;
+        //Dictionary<string, DateTime> calendar;
         List<int> indicesWithMatch = new List<int>();
+
+        string[] calendarNames;
+        DateTime[] calendarValues;
 
         public Form1()
         {
@@ -353,7 +356,7 @@ namespace ComparisonTool
             }
             xlString2 = xlString;
             */
-            // grab the fiscal year calender
+            // grab the fiscal year calendar
             if (getYears)
             {
                 // TODO write the code to grab fiscal year ranges
@@ -363,7 +366,8 @@ namespace ComparisonTool
                 int calRowCount = xlRange.Rows.Count;
                 int calColCount = xlRange.Columns.Count;
 
-                calendar = new Dictionary<string, DateTime>();
+                calendarNames = new string[calRowCount];
+                calendarValues = new DateTime[calRowCount];
                 values = (object[,])xlRange.Value2;
                 int NumRow = 1;
                 while (NumRow <= values.GetLength(0))
@@ -374,7 +378,8 @@ namespace ComparisonTool
 
                         DateTime conv = DateTime.FromOADate(d);
 
-                        calendar.Add(values[NumRow, 2].ToString(), conv);
+                        calendarNames[NumRow - 1] = values[NumRow, 2].ToString();
+                        calendarValues[NumRow - 1] = conv;
                     }
                     NumRow++;
                 }
@@ -445,18 +450,16 @@ namespace ComparisonTool
         {
             //Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
             //oXL.Visible = true;
-            string controlAccount;
-            string workPackage;
-            string resourceAssignment;
-            string result;
-
+            Dictionary<string, double[]> resultsDict = new Dictionary<string, double[]>();
             // the delta in value
             double difference = 0.0;
+            double[] resultsVal;
             object[,] finalResults = new object[rowCount, colCount];
             //  MessageBox.Show(xlString2[2, 1].ToString() + " " + xlString2[2, 2].ToString());
             string name;
             for (int i = 2; i <= rowCount; i++)
             {
+                resultsVal = new double[3];
                 name = "";
                 for (int j = 1; j < colCount - 1; j++)
                 {
@@ -465,12 +468,101 @@ namespace ComparisonTool
                     {
                         name += xlString2[i, j].ToString();
                     }
+                    else if (j == dateIndex+1)
+                    {
+                        double d = Convert.ToDouble(xlString2[i, j]);
+
+                        DateTime conv = DateTime.FromOADate(d);
+
+                        for (int k = 0; k < calendarNames.Length; k++)
+                        {
+                            if (k == 0 && conv <= calendarValues[k])
+                            {
+                                name += calendarNames[k];
+                            }
+                            else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                            {
+                                name += calendarNames[k];
+                            }
+                            /*else if (k == calendarValues.Length - 1 && k <= )
+                            {
+                                name += calendarNames[k];
+                            }*/
+                        }
+                    }
+
                     if (j < colCount - 2)
                     {
                         name += "_";
                     }
                 }
-                MessageBox.Show(name);
+                double[] tryArr;
+                if (! resultsDict.TryGetValue(name, out tryArr))
+                {
+                    resultsVal[1] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
+                    resultsVal[2] = resultsVal[1];
+                    resultsDict.Add(name, resultsVal);
+                }
+                else
+                {
+                    tryArr[1] += Convert.ToDouble(xlString2[i, valueIndex + 1]);
+                    tryArr[2] = tryArr[1];
+                    resultsDict[name] = tryArr;
+                }
+                //MessageBox.Show(name);
+            }
+
+            for (int i = 2; i <= xl1Size; i++)
+            {
+                name = "";
+                for (int j = 1; j < colCount - 1; j++)
+                {
+                    // because of the weird way excel file reading works every index is +1 what it should be
+                    if (j != dateIndex + 1)
+                    {
+                        name += xlString2[i, j].ToString();
+                    }
+                    else if (j == dateIndex + 1)
+                    {
+                        double d = Convert.ToDouble(xlString2[i, j]);
+
+                        DateTime conv = DateTime.FromOADate(d);
+
+                        for (int k = 0; k < calendarNames.Length; k++)
+                        {
+                            if (k == 0 && conv <= calendarValues[k])
+                            {
+                                name += calendarNames[k];
+                            }
+                            else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                            {
+                                name += calendarNames[k];
+                            }
+                            /*else if (k == calendarValues.Length - 1 && k <= )
+                            {
+                                name += calendarNames[k];
+                            }*/
+                        }
+                    }
+
+                    if (j < colCount - 2)
+                    {
+                        name += "_";
+                    }
+                }
+                if (resultsDict.TryGetValue(name, out resultsVal))
+                {
+                    resultsVal[0] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
+                    resultsVal[2] = resultsVal[1] - resultsVal[0];
+                    resultsDict[name] = resultsVal;
+                }
+                else
+                {
+                    resultsVal[0] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
+                    resultsVal[1] = 0;
+                    resultsVal[2] = -resultsVal[0];
+                    resultsDict.Add(name, resultsVal);
+                }
             }
             /*
                 controlAccount = xlString2[i, 1].ToString();
