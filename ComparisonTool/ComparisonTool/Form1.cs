@@ -299,7 +299,7 @@ namespace ComparisonTool
             }
         }
 
-        private int[] readExcelFile2()
+        private int[] readExcelFile2(bool getYears)
         {
             Excel.Application xlApp = new Excel.Application();
             Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(filenamesArray[1]);
@@ -308,9 +308,6 @@ namespace ComparisonTool
 
             int rowCount = xlRange.Rows.Count;
             int colCount = xlRange.Columns.Count;
-
-            string[] filenameArray = filenamesArray[1].Split('\\');
-            string tmp = filenameArray[filenameArray.Length - 1];
 
             object[,] xlString = new object[rowCount, colCount];
             string[] Fields = new string[colCount];
@@ -336,6 +333,42 @@ namespace ComparisonTool
                 NumRow++;
             }
             xlString2 = xlString;
+            
+            // grab the fiscal year calender
+            if (getYears)
+            {
+                // TODO write the code to grab fiscal year ranges
+                xlWorkSheet = xlWorkBook.Sheets[3];
+                xlRange = xlWorkSheet.UsedRange;
+
+                int calRowCount = xlRange.Rows.Count;
+                int calColCount = xlRange.Columns.Count;
+
+                object[,] calendar = new object[calRowCount, calColCount];
+                values = (object[,])xlRange.Value2;
+                NumRow = 1;
+                while (NumRow <= values.GetLength(0))
+                {
+                    for (int c = 1; c <= calColCount; c++)
+                    {
+                        // for the first object in each row we want the date
+                        if (c == 1 && NumRow != 1)
+                        {
+                            double d = Convert.ToDouble(values[NumRow, c]);
+
+                            DateTime conv = DateTime.FromOADate(d);
+                            MessageBox.Show(d.ToString());
+
+                            calendar[NumRow - 1, c - 1] = conv;
+                        }
+                        else
+                        {
+                            calendar[NumRow - 1, c - 1] = values[NumRow, c];
+                        }
+                    }
+                    NumRow++;
+                }
+            }
 
             xlWorkBook.Close(SaveChanges: false);
             xlApp.Quit();
@@ -344,14 +377,6 @@ namespace ComparisonTool
             rv[0] = rowCount;
             rv[1] = colCount;
             return rv;
-        }
-
-        private void createReportButton_Click(object sender, EventArgs e)
-        {
-            int[] counts = readExcelFile2();
-            createReportByResult(counts[0], counts[1]);
-
-            this.Close();
         }
 
         private void createReportByResult(int rowCount, int colCount)
@@ -406,42 +431,6 @@ namespace ComparisonTool
             GC.WaitForPendingFinalizers();
         }
 
-        private void column4Box_SelectedIndexChanged_1(object sender, EventArgs e)
-        {
-            uniqueNames[3] = column4Box.Text;
-            uniqueNameIndices[3] = column4Box.SelectedIndex;
-            checkUniqueNames();
-        }
-
-        private void column2Box_SelectedIndexChanged_1(object sender, EventArgs e)
-        {
-            uniqueNames[1] = column2Box.Text;
-            uniqueNameIndices[1] = column2Box.SelectedIndex;
-            checkUniqueNames();
-        }
-
-        private void column3Box_SelectedIndexChanged_1(object sender, EventArgs e)
-        {
-            uniqueNames[2] = column3Box.Text;
-            uniqueNameIndices[2] = column3Box.SelectedIndex;
-            checkUniqueNames();
-        }
-
-        private void column1Box_SelectedIndexChanged_1(object sender, EventArgs e)
-        {
-            uniqueNames[0] = column1Box.Text;
-            uniqueNameIndices[0] = column1Box.SelectedIndex;
-            checkUniqueNames();
-        }
-
-        private void byYearButton_Click(object sender, EventArgs e)
-        {
-            int[] counts = readExcelFile2();
-            createReportByYear(counts[0], counts[1]);
-
-            this.Close();
-        }
-
         private void createReportByYear(int rowCount, int colCount)
         {
             Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
@@ -492,6 +481,50 @@ namespace ComparisonTool
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
+        }
+
+        private void createReportButton_Click(object sender, EventArgs e)
+        {
+            int[] counts = readExcelFile2(false);
+            createReportByResult(counts[0], counts[1]);
+
+            this.Close();
+        }
+
+        private void byYearButton_Click(object sender, EventArgs e)
+        {
+            int[] counts = readExcelFile2(true);
+            //createReportByYear(counts[0], counts[1]);
+
+            this.Close();
+        }
+
+        private void column4Box_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            uniqueNames[3] = column4Box.Text;
+            uniqueNameIndices[3] = column4Box.SelectedIndex;
+            checkUniqueNames();
+        }
+
+        private void column2Box_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            uniqueNames[1] = column2Box.Text;
+            uniqueNameIndices[1] = column2Box.SelectedIndex;
+            checkUniqueNames();
+        }
+
+        private void column3Box_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            uniqueNames[2] = column3Box.Text;
+            uniqueNameIndices[2] = column3Box.SelectedIndex;
+            checkUniqueNames();
+        }
+
+        private void column1Box_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            uniqueNames[0] = column1Box.Text;
+            uniqueNameIndices[0] = column1Box.SelectedIndex;
+            checkUniqueNames();
         }
 
         private void helpButton_Click(object sender, EventArgs e)
