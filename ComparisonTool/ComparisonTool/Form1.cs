@@ -370,6 +370,7 @@ namespace ComparisonTool
                 calendarValues = new DateTime[calRowCount];
                 values = (object[,])xlRange.Value2;
                 int NumRow = 1;
+                int correction = 0;
                 while (NumRow <= values.GetLength(0))
                 {
                     if (values[NumRow, 2].ToString() != "Transition" && NumRow != 1)
@@ -378,8 +379,9 @@ namespace ComparisonTool
 
                         DateTime conv = DateTime.FromOADate(d);
 
-                        calendarNames[NumRow - 1] = values[NumRow, 2].ToString();
-                        calendarValues[NumRow - 1] = conv;
+                        calendarNames[correction] = values[NumRow, 2].ToString();
+                        calendarValues[correction] = conv;
+                        correction++;
                     }
                     NumRow++;
                 }
@@ -447,19 +449,16 @@ namespace ComparisonTool
         }
 
         private void createReportByYear(int rowCount, int colCount)
-        {
-            //Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
-            //oXL.Visible = true;
+        {   
             Dictionary<string, double[]> resultsDict = new Dictionary<string, double[]>();
             // the delta in value
             double difference = 0.0;
             double[] resultsVal;
-            object[,] finalResults = new object[rowCount, colCount];
             //  MessageBox.Show(xlString2[2, 1].ToString() + " " + xlString2[2, 2].ToString());
             string name;
             for (int i = 2; i <= rowCount; i++)
             {
-                resultsVal = new double[3];
+                resultsVal = new double[3 * calendarNames.Length];
                 name = "";
                 for (int j = 1; j < colCount - 1; j++)
                 {
@@ -468,7 +467,7 @@ namespace ComparisonTool
                     {
                         name += xlString2[i, j].ToString();
                     }
-                    else if (j == dateIndex+1)
+                    /*else if (j == dateIndex+1)
                     {
                         double d = Convert.ToDouble(xlString2[i, j]);
 
@@ -483,35 +482,53 @@ namespace ComparisonTool
                             else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
                             {
                                 name += calendarNames[k];
-                            }
-                            /*else if (k == calendarValues.Length - 1 && k <= )
-                            {
-                                name += calendarNames[k];
-                            }*/
-                        }
-                    }
+                            } 
+      z                  }
+                    }*/
 
-                    if (j < colCount - 2)
+                    if (j < colCount - 2 && j != dateIndex+1)
                     {
                         name += "_";
                     }
                 }
                 double[] tryArr;
+                double d = Convert.ToDouble(xlString2[i, dateIndex+1]);
+                int offset = 0;
+
+                DateTime conv = DateTime.FromOADate(d);
+
+                for (int k = 0; k < calendarNames.Length; k++)
+                {
+                    //MessageBox.Show(calendarNames[k]);
+                    if (k == 0 && conv <= calendarValues[k])
+                    {
+                        offset = k;
+                        break;
+                    }
+                    else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                    {
+                        offset = k;
+                        break;
+                    }
+                }
+                //MessageBox.Show(offset.ToString());
+
                 if (! resultsDict.TryGetValue(name, out tryArr))
                 {
-                    resultsVal[1] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
-                    resultsVal[2] = resultsVal[1];
+                    resultsVal[offset*3 + 1] = Convert.ToDouble(xlString2[i, (valueIndex + 1)]);
+                    resultsVal[offset*3 + 2] = resultsVal[offset*3 + 1];
                     resultsDict.Add(name, resultsVal);
                 }
                 else
                 {
-                    tryArr[1] += Convert.ToDouble(xlString2[i, valueIndex + 1]);
-                    tryArr[2] = tryArr[1];
+                    tryArr[offset*3 + 1] = Convert.ToDouble(xlString2[i, (valueIndex + 1)]);
+                    tryArr[offset*3 + 2] = tryArr[offset*3 + 1];
                     resultsDict[name] = tryArr;
                 }
-                //MessageBox.Show(name);
             }
 
+            //count of rows in xl sheet 1 that aren't in xl sheet 2
+            int count = 0;
             for (int i = 2; i <= xl1Size; i++)
             {
                 name = "";
@@ -520,29 +537,7 @@ namespace ComparisonTool
                     // because of the weird way excel file reading works every index is +1 what it should be
                     if (j != dateIndex + 1)
                     {
-                        name += xlString2[i, j].ToString();
-                    }
-                    else if (j == dateIndex + 1)
-                    {
-                        double d = Convert.ToDouble(xlString2[i, j]);
-
-                        DateTime conv = DateTime.FromOADate(d);
-
-                        for (int k = 0; k < calendarNames.Length; k++)
-                        {
-                            if (k == 0 && conv <= calendarValues[k])
-                            {
-                                name += calendarNames[k];
-                            }
-                            else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
-                            {
-                                name += calendarNames[k];
-                            }
-                            /*else if (k == calendarValues.Length - 1 && k <= )
-                            {
-                                name += calendarNames[k];
-                            }*/
-                        }
+                        name += xlString1[i, j].ToString();
                     }
 
                     if (j < colCount - 2)
@@ -550,20 +545,148 @@ namespace ComparisonTool
                         name += "_";
                     }
                 }
+
+                double d = Convert.ToDouble(xlString1[i, dateIndex + 1]);
+                int offset = 0;
+
+                DateTime conv = DateTime.FromOADate(d);
+
+                for (int k = 0; k < calendarNames.Length; k++)
+                {
+                    if (k == 0 && conv <= calendarValues[k])
+                    {
+                        offset = k;
+                    }
+                    else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                    {
+                        offset = k;
+                    }
+                }
+
                 if (resultsDict.TryGetValue(name, out resultsVal))
                 {
-                    resultsVal[0] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
-                    resultsVal[2] = resultsVal[1] - resultsVal[0];
+                    resultsVal[offset*3] = Convert.ToDouble(xlString1[i, valueIndex + 1]);
+                    resultsVal[offset*3 + 2] = resultsVal[offset*3 + 1] - resultsVal[offset*3];
                     resultsDict[name] = resultsVal;
+                    /*string str = "";
+                    for (int a = 0; a < resultsVal.Length; a++)
+                    {
+                        str += resultsVal[a];
+                        str += " ";
+                    }
+                    //MessageBox.Show(str);
+                    */
                 }
                 else
                 {
-                    resultsVal[0] = Convert.ToDouble(xlString2[i, valueIndex + 1]);
-                    resultsVal[1] = 0;
-                    resultsVal[2] = -resultsVal[0];
+                    resultsVal = new double[3 * calendarNames.Length];
+                    resultsVal[offset*3] = Convert.ToDouble(xlString1[i, valueIndex + 1]);
+                    resultsVal[offset*3 + 1] = 0;
+                    resultsVal[offset*3 + 2] = -resultsVal[offset];
                     resultsDict.Add(name, resultsVal);
+                    count++;
                 }
+
+                /*string str = "";
+                for (int a = 0; a < resultsDict[name].Length; a++)
+                {
+                    str += resultsDict[name][a].ToString() + " ";
+                    if ((a + 1) % 3 == 0)
+                        str += "\n";
+                }
+                MessageBox.Show(str);
+                */
             }
+
+            int finalColSize = calendarNames.Length * colCount * 3 + colCount;
+            object[,] finalResults = new object[rowCount+count, finalColSize];
+            string prev = "";
+            string current = "";
+            string[] splitString;
+            int currRow = 1;
+            int currCol = 0;
+            foreach (var entry in resultsDict)
+            {
+                /*string str = "";
+                for (int i = 0; i < entry.Value.Length; i++)
+                {
+                    str += entry.Value[i].ToString();
+                    str += " ";
+                }
+                MessageBox.Show(entry.Key + "value: " + str);
+                */
+
+                splitString = entry.Key.Split('_');
+                currCol = 0;
+
+                for (int i = 0; i < splitString.Length; i++)
+                {
+                    finalResults[currRow, i] = splitString[i];
+                    currCol++;
+                }
+
+                current = "";
+                for (int i = 0; i < entry.Value.Length; i++)
+                {
+                    current += entry.Value[i].ToString() + " ";
+                    finalResults[currRow, currCol] = entry.Value[i];
+                    currCol++;
+                }
+               // MessageBox.Show(current);
+
+                currRow++;
+                /*current = entry.Key.Substring(0, entry.Key.Length-5);
+                if (prev != current)
+                {
+                    currRow++;
+                    currCol = 0;
+                    splitString = entry.Key.Split('_');
+                    for (int i = 0; i < splitString.Length; i++)
+                    {
+                        finalResults[currRow, i] = splitString[i];
+                        currCol++;
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        finalResults[currRow, i + splitString.Length] = entry.Value[i];
+                        //MessageBox.Show(entry.Value[i].ToString());
+                        currCol++;
+                    }
+                    prev = current;
+                }
+                else
+                {
+                    //MessageBox.Show("curr = prev" + " " + currRow.ToString() + " " + currCol.ToString());
+                    for (int i = 0; i < 3; i++)
+                    {
+                        finalResults[currRow, currCol] = entry.Value[i];
+                        
+                        currCol++;
+                    }
+                }*/
+                //if (prev == )
+            }
+
+            for (int i = 0; i < dateIndex; i++)
+            {
+                finalResults[0, i] = xlString2[1, i+1];
+            }
+            for (int i = 0; i < calendarNames.Length; i++)
+            {
+                finalResults[0, (dateIndex+1) + i*3] = calendarNames[i] + " Before";
+                finalResults[0, (dateIndex+1) + 1 + i*3] = calendarNames[i] + " After";
+                finalResults[0, (dateIndex+1) + 2 + i*3] = calendarNames[i] + " Delta";
+            }
+
+            Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
+            oXL.Visible = true;
+            Excel._Workbook oWB = (Microsoft.Office.Interop.Excel._Workbook)(oXL.Workbooks.Add(""));
+            Excel._Worksheet oSheet = (Microsoft.Office.Interop.Excel._Worksheet)oWB.ActiveSheet;
+            var startCell = (Excel.Range)oSheet.Cells[1, 1];
+            var endCell = (Excel.Range)oSheet.Cells[rowCount + count, finalColSize];
+            var writeRange = oSheet.Range[startCell, endCell];
+
+            writeRange.Value2 = finalResults;
             /*
                 controlAccount = xlString2[i, 1].ToString();
                 while (xlString2[i, 1].ToString() == controlAccount)
