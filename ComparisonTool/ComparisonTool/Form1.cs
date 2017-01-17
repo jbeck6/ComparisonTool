@@ -43,8 +43,10 @@ namespace ComparisonTool
         //Dictionary<string, DateTime> calendar;
         List<int> indicesWithMatch = new List<int>();
 
-        string[] calendarNames;
-        DateTime[] calendarValues;
+        string[] calendarXl1Names;
+        DateTime[] calendarXl1Values;
+        string[] calendarXl2Names;
+        DateTime[] calendarXl2Values;
 
         public Form1()
         {
@@ -100,62 +102,33 @@ namespace ComparisonTool
                     dateIndex = i - 1;
                 }
             }
-            /*
+
+            xlWorkSheet = xlWorkBook.Sheets[3];
+            xlRange = xlWorkSheet.UsedRange;
+
+            int calRowCount = xlRange.Rows.Count;
+            int calColCount = xlRange.Columns.Count;
+
+            calendarXl1Names = new string[calRowCount];
+            calendarXl1Values = new DateTime[calRowCount];
+            values = (object[,])xlRange.Value2;
             int NumRow = 1;
+            int correction = 0;
             while (NumRow <= values.GetLength(0))
             {
-                indicesWithMatch.Add(NumRow - 1);
-                for (int c = 1; c <= colCount; c++)
+                if (values[NumRow, 2].ToString() != "Transition" && NumRow != 1)
                 {
-                    // had to do this to store dates as a date object
-                    if (c - 1 == dateIndex && NumRow != 1)
-                    {
-                        double d = Convert.ToDouble(values[NumRow, c]);
+                    double d = Convert.ToDouble(values[NumRow, 1]);
 
-                        DateTime conv = DateTime.FromOADate(d);
+                    DateTime conv = DateTime.FromOADate(d);
 
-                        xlString[NumRow - 1, c - 1] = conv.ToString(@"MM\/dd\/yyyy");
-                    }
-                    else
-                    {
-                        // if it's the first row, it's the column names
-                        if (NumRow == 1)
-                        {
-                            colNames[c - 1] = values[NumRow, c].ToString();
-                            if (colNames[c-1] == "Value")
-                            {
-                                valueIndex = c-1;
-                            }
-                            else if (colNames[c-1] == "Date")
-                            {
-                                dateIndex = c-1;
-                            }
-                        }
-                        xlString[NumRow - 1, c - 1] = values[NumRow, c];
-                    }
+                    calendarXl1Names[correction] = values[NumRow, 2].ToString();
+                    calendarXl1Values[correction] = conv;
+                    correction++;
                 }
                 NumRow++;
             }
-            xlString1 = xlString;
-
-
-            /*System.Array myvalues;
-            string[] colNames;
-  
-            myvalues = (System.Array)xlRange.Rows[1].Cells.Value;
-            colNames = myvalues.OfType<object>().Select(o => o.ToString()).ToArray();
-
-            for (int i = 0; i < colNames.Length; i++)
-            {
-                if (colNames[i] == "Value")
-                {
-                    valueIndex = i;
-                }
-                else if(colNames[i] == "Date")
-                {
-                    dateIndex = i;
-                }
-            }*/
+            MessageBox.Show(correction.ToString());
 
             column1Box.Items.AddRange(colNames);
             column2Box.Items.AddRange(colNames);
@@ -366,8 +339,8 @@ namespace ComparisonTool
                 int calRowCount = xlRange.Rows.Count;
                 int calColCount = xlRange.Columns.Count;
 
-                calendarNames = new string[calRowCount];
-                calendarValues = new DateTime[calRowCount];
+                calendarXl2Names = new string[calRowCount];
+                calendarXl2Values = new DateTime[calRowCount];
                 values = (object[,])xlRange.Value2;
                 int NumRow = 1;
                 int correction = 0;
@@ -379,8 +352,8 @@ namespace ComparisonTool
 
                         DateTime conv = DateTime.FromOADate(d);
 
-                        calendarNames[correction] = values[NumRow, 2].ToString();
-                        calendarValues[correction] = conv;
+                        calendarXl2Names[correction] = values[NumRow, 2].ToString();
+                        calendarXl2Values[correction] = conv;
                         correction++;
                     }
                     NumRow++;
@@ -452,13 +425,12 @@ namespace ComparisonTool
         {   
             Dictionary<string, double[]> resultsDict = new Dictionary<string, double[]>();
             // the delta in value
-            double difference = 0.0;
             double[] resultsVal;
             //  MessageBox.Show(xlString2[2, 1].ToString() + " " + xlString2[2, 2].ToString());
             string name;
             for (int i = 2; i <= rowCount; i++)
             {
-                resultsVal = new double[3 * calendarNames.Length];
+                resultsVal = new double[3 * (calendarXl2Names.Length - 1)];
                 name = "";
                 for (int j = 1; j < colCount - 1; j++)
                 {
@@ -467,24 +439,6 @@ namespace ComparisonTool
                     {
                         name += xlString2[i, j].ToString();
                     }
-                    /*else if (j == dateIndex+1)
-                    {
-                        double d = Convert.ToDouble(xlString2[i, j]);
-
-                        DateTime conv = DateTime.FromOADate(d);
-
-                        for (int k = 0; k < calendarNames.Length; k++)
-                        {
-                            if (k == 0 && conv <= calendarValues[k])
-                            {
-                                name += calendarNames[k];
-                            }
-                            else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
-                            {
-                                name += calendarNames[k];
-                            } 
-      z                  }
-                    }*/
 
                     if (j < colCount - 2 && j != dateIndex+1)
                     {
@@ -497,15 +451,15 @@ namespace ComparisonTool
 
                 DateTime conv = DateTime.FromOADate(d);
 
-                for (int k = 0; k < calendarNames.Length; k++)
+                for (int k = 0; k < calendarXl2Names.Length; k++)
                 {
                     //MessageBox.Show(calendarNames[k]);
-                    if (k == 0 && conv <= calendarValues[k])
+                    if (k == 0 && conv <= calendarXl2Values[k])
                     {
                         offset = k;
                         break;
                     }
-                    else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                    else if (conv <= calendarXl2Values[k] && conv > calendarXl2Values[k - 1])
                     {
                         offset = k;
                         break;
@@ -551,13 +505,13 @@ namespace ComparisonTool
 
                 DateTime conv = DateTime.FromOADate(d);
 
-                for (int k = 0; k < calendarNames.Length; k++)
+                for (int k = 0; k < calendarXl1Names.Length; k++)
                 {
-                    if (k == 0 && conv <= calendarValues[k])
+                    if (k == 0 && conv <= calendarXl1Values[k])
                     {
                         offset = k;
                     }
-                    else if (conv <= calendarValues[k] && conv > calendarValues[k - 1])
+                    else if (conv <= calendarXl1Values[k] && conv > calendarXl1Values[k - 1])
                     {
                         offset = k;
                     }
@@ -568,18 +522,18 @@ namespace ComparisonTool
                     resultsVal[offset*3] = Convert.ToDouble(xlString1[i, valueIndex + 1]);
                     resultsVal[offset*3 + 2] = resultsVal[offset*3 + 1] - resultsVal[offset*3];
                     resultsDict[name] = resultsVal;
-                    /*string str = "";
+                    string str = "";
                     for (int a = 0; a < resultsVal.Length; a++)
                     {
                         str += resultsVal[a];
                         str += " ";
                     }
-                    //MessageBox.Show(str);
-                    */
+                   //MessageBox.Show(str + " year: " + calendarXl1Names[offset]);
+                    
                 }
                 else
                 {
-                    resultsVal = new double[3 * calendarNames.Length];
+                    resultsVal = new double[3 * (calendarXl1Names.Length-1)];
                     resultsVal[offset*3] = Convert.ToDouble(xlString1[i, valueIndex + 1]);
                     resultsVal[offset*3 + 1] = 0;
                     resultsVal[offset*3 + 2] = -resultsVal[offset];
@@ -598,9 +552,8 @@ namespace ComparisonTool
                 */
             }
 
-            int finalColSize = calendarNames.Length * colCount * 3 + colCount;
+            int finalColSize = calendarXl1Names.Length * colCount * 3 + colCount;
             object[,] finalResults = new object[rowCount+count, finalColSize];
-            string prev = "";
             string current = "";
             string[] splitString;
             int currRow = 1;
@@ -629,7 +582,7 @@ namespace ComparisonTool
                 for (int i = 0; i < entry.Value.Length; i++)
                 {
                     current += entry.Value[i].ToString() + " ";
-                    finalResults[currRow, currCol] = entry.Value[i];
+                    finalResults[currRow, currCol - 1] = entry.Value[i];
                     currCol++;
                 }
                // MessageBox.Show(current);
@@ -671,12 +624,29 @@ namespace ComparisonTool
             {
                 finalResults[0, i] = xlString2[1, i+1];
             }
-            for (int i = 0; i < calendarNames.Length; i++)
+
+            string test = calendarXl1Names[0];
+            int c = 0;
+            while (test != null)
             {
-                finalResults[0, (dateIndex+1) + i*3] = calendarNames[i] + " Before";
-                finalResults[0, (dateIndex+1) + 1 + i*3] = calendarNames[i] + " After";
-                finalResults[0, (dateIndex+1) + 2 + i*3] = calendarNames[i] + " Delta";
+                finalResults[0, dateIndex + (c * 3)] = calendarXl1Names[c] + " Before";
+                if (calendarXl2Names.Length > c)
+                    finalResults[0, dateIndex + (c * 3) + 1] = calendarXl2Names[c] + " After";
+                else
+                    finalResults[0, (dateIndex + 1) + 1 + c * 3] = calendarXl1Names[c] + " After";
+                finalResults[0, dateIndex + (c * 3) + 2] = calendarXl1Names[c] + " Delta";
+                c++;
+                test = calendarXl1Names[c];
             }
+            /*for (int i = 0; i < calendarXl1Names.Length-2; i++)
+            {
+                finalResults[0, (dateIndex+1) + i*3] = calendarXl1Names[i] + " Before";
+                if (calendarXl2Names.Length > i)
+                    finalResults[0, (dateIndex+1) + 1 + i*3] = calendarXl2Names[i] + " After";
+                else
+                    finalResults[0, (dateIndex + 1) + 1 + i * 3] = calendarXl1Names[i] + " After";
+                finalResults[0, (dateIndex+1) + 2 + i*3] = calendarXl1Names[i] + " Delta";
+            }*/
 
             Excel.Application oXL = new Microsoft.Office.Interop.Excel.Application();
             oXL.Visible = true;
@@ -745,10 +715,10 @@ namespace ComparisonTool
 
             writeRange.Value2 = finalResults;
 
-            //MessageBox.Show("Success");
+            //MessageBox.Show("Success");*/
 
             GC.Collect();
-            GC.WaitForPendingFinalizers();*/
+            GC.WaitForPendingFinalizers();
         }
 
         private void createReportButton_Click(object sender, EventArgs e)
